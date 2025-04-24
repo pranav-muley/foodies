@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: food-ordering
+  data:
+    mongodb:
+      uri: ${MONGO_DB_URL}
+      database: ${FOODIES_DB}
+server:
+  port: 9091
+
+secret:
+  key: ${SECRET_SUPER_KEY}
