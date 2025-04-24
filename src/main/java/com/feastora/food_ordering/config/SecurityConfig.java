@@ -45,21 +45,22 @@ public class SecurityConfig extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
 
-        String token = request.getParameter("tkn");
+        String sessionToken = request.getHeader("Authorization"); // or cookie
+        String ip = request.getRemoteAddr();
+        String userAgent = request.getHeader("User-Agent");
 
-        String path = request.getRequestURI();
-
-        // Only validate for specific paths
-        if (path.startsWith("/order") || path.startsWith("/cart")) {
-            if (token == null || !jwtUtil.validateToken(token)) {
+        if (request.getRequestURI().startsWith("/secure-session")) {
+            if (sessionToken == null || !jwtUtil.validateSessionToken(sessionToken, ip, userAgent)) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Invalid or expired QR token.");
+                response.getWriter().write("Invalid or stolen session token.");
                 return;
             }
-            // setting userId and TableNum in THreadCOntext params instead of request.setAttributes();
-            ThreadContextUtils.setUserId(jwtUtil.getUserId(token));
-            ThreadContextUtils.setTableNumber(jwtUtil.getTableNumber(token));
+            // setting userId and TableNum in ThreadContext params instead of request.setAttributes();
+            ThreadContextUtils.setUserId(jwtUtil.getUserId(sessionToken));
+            ThreadContextUtils.setTableNumber(jwtUtil.getTableNumber(sessionToken));
         }
+        ThreadContextUtils.setUserId(jwtUtil.getUserId(sessionToken));
+        ThreadContextUtils.setTableNumber(jwtUtil.getTableNumber(sessionToken));
 
         chain.doFilter(request, response);
     }

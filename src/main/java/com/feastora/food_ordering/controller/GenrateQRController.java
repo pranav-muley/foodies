@@ -7,16 +7,21 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/QR")
+@RequestMapping("/qr")
 public class GenrateQRController {
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
 
-    @GetMapping("")
+    public GenrateQRController(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
+    @GetMapping("/generate")
     public String createQrToken(String userId, long tableNumber) {
         String token = jwtUtil.generateQRToken(userId, tableNumber);
-
+        if (token == null) {
+            return "INVALID TOKEN CREATED";
+        }
         return token;
     }
 
