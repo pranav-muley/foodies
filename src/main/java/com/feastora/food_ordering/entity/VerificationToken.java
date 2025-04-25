@@ -1,37 +1,46 @@
 package com.feastora.food_ordering.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
-import java.util.Calendar;
+
 import java.util.Date;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Document(collection = "verificationToken")
-
 public class VerificationToken {
 
-    private static final int EXPIRATION_TIME = 10;
+    private static final int EXPIRATION_MINUTES = 10;
 
     @Id
-    private String _id;
+    private String id;
 
-    @Indexed(unique = true)
     private String token;
     private Long tableNumber;
     private String userId;
-    public VerificationToken(String userId, long tableNumber, String token) {
-        this.userId = userId;
-        this.tableNumber = tableNumber;
-        this.token = token;
+
+    private long createdAtEpoch;
+
+    private long expiresAtEpoch;
+
+    private Date expiresAt; // Use for Mongo TTL (index separately)
+
+    public static VerificationToken create(String userId, String token) {
+        long now = System.currentTimeMillis();
+        long expiry = now + EXPIRATION_MINUTES * 60 * 1000L;
+        return VerificationToken.builder()
+                .userId(userId)
+                .token(token)
+                .createdAtEpoch(now)
+                .expiresAtEpoch(expiry)
+                .expiresAt(new Date(expiry)) // required for TTL
+                .build();
     }
-    public VerificationToken(String token) {
-        super();
-        this.token = token;
+
+    public boolean isExpired() {
+        return System.currentTimeMillis() > this.expiresAtEpoch;
     }
 }

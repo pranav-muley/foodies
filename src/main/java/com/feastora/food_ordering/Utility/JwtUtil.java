@@ -22,16 +22,15 @@ public class JwtUtil {
                 .claim("userId", userId)
                 .claim("tableNumber", tableNumber)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .signWith(SECRET_KEY, SignatureAlgorithm.HS256)
-                .setExpiration(new Date(System.currentTimeMillis() + 2 * 60 * 60 * 1000L))
+                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
+                .setExpiration(Date.from(Instant.now().plusSeconds(4 * 60 * 60 * 1000L)))
                 .compact();
     }
 
     public Claims validateToken(String token) {
         try {
-            return Jwts.parserBuilder()
+            return Jwts.parser()
                     .setSigningKey(SECRET_KEY)
-                    .build()
                     .parseClaimsJws(token)
                     .getBody();
         } catch (Exception e) {
@@ -40,20 +39,18 @@ public class JwtUtil {
         }
     }
 
-    public String getUserId(String token) {
-        return Jwts.parserBuilder()
+    public String getUserId(String sessionToken) {
+        return Jwts.parser()
                 .setSigningKey(SECRET_KEY)
-                .build()
-                .parseClaimsJws(token)
+                .parseClaimsJws(sessionToken)
                 .getBody()
                 .get("userId", String.class);
     }
 
-    public Long getTableNumber(String token) {
-        return Jwts.parserBuilder()
+    public Long getTableNumber(String sessionToken) {
+        return Jwts.parser()
                 .setSigningKey(SECRET_KEY)
-                .build()
-                .parseClaimsJws(token)
+                .parseClaimsJws(sessionToken)
                 .getBody()
                 .get("tableNumber", Long.class);
     }
@@ -66,15 +63,14 @@ public class JwtUtil {
                 .claim("tableNumber", tableNumber)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 2 * 60 * 60 * 1000L)) // 2 hours
-                .signWith(SECRET_KEY, SignatureAlgorithm.HS256)
+                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
                 .compact();
     }
 
     public boolean validateSessionToken(String token, String ip, String userAgent) {
         try {
-            Claims claims = Jwts.parserBuilder()
+            Claims claims = Jwts.parser()
                     .setSigningKey(SECRET_KEY)
-                    .build()
                     .parseClaimsJws(token)
                     .getBody();
 

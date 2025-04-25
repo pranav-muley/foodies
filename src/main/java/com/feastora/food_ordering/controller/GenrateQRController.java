@@ -1,28 +1,31 @@
 package com.feastora.food_ordering.controller;
 
-import com.feastora.food_ordering.Utility.JwtUtil;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.feastora.food_ordering.HttpResponse.BaseResponse;
+import com.feastora.food_ordering.HttpResponse.GenericResponse;
+import com.feastora.food_ordering.service.QrService;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/qr")
-public class GenrateQRController {
+public class GenrateQRController extends BaseResponse {
 
-    private final JwtUtil jwtUtil;
+    private final QrService qrService;
 
-    public GenrateQRController(JwtUtil jwtUtil) {
-        this.jwtUtil = jwtUtil;
+    public GenrateQRController(QrService qrService) {
+        this.qrService = qrService;
     }
 
-    @GetMapping("/generate")
-    public String createQrToken(String userId, long tableNumber) {
-        String token = jwtUtil.generateQRToken(userId, tableNumber);
-        if (token == null) {
-            return "INVALID TOKEN CREATED";
+    @GetMapping("/generate-url")
+    public ResponseEntity<GenericResponse<String>> createQrToken(@RequestParam String userId, @RequestParam int tableNumber, HttpServletRequest request) {
+        GenericResponse<String> response = qrService.generateUrl(userId, tableNumber, request);
+        if(response.getError() != null) {
+            return badRequest(response);
         }
-        return token;
+        return newResponseOk(response);
     }
-
 }

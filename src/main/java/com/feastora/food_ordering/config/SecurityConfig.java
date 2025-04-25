@@ -6,6 +6,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.NonNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -42,13 +43,12 @@ public class SecurityConfig extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    protected void doFilterInternal(HttpServletRequest request, @NonNull HttpServletResponse response,@NonNull FilterChain chain)
             throws ServletException, IOException {
 
-        String sessionToken = request.getHeader("Authorization"); // or cookie
+        String sessionToken = request.getHeader("Authorization");
         String ip = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");
-
         if (request.getRequestURI().startsWith("/secure-session")) {
             if (sessionToken == null || !jwtUtil.validateSessionToken(sessionToken, ip, userAgent)) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -59,8 +59,6 @@ public class SecurityConfig extends OncePerRequestFilter {
             ThreadContextUtils.setUserId(jwtUtil.getUserId(sessionToken));
             ThreadContextUtils.setTableNumber(jwtUtil.getTableNumber(sessionToken));
         }
-        ThreadContextUtils.setUserId(jwtUtil.getUserId(sessionToken));
-        ThreadContextUtils.setTableNumber(jwtUtil.getTableNumber(sessionToken));
 
         chain.doFilter(request, response);
     }

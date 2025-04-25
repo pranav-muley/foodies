@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.util.List;
 import java.util.UUID;
@@ -16,6 +15,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserModel {
+    @Builder.Default
     private String userId = UUID.randomUUID().toString();
     private String userName;
     private String password;

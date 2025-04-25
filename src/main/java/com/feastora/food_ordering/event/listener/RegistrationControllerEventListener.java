@@ -21,14 +21,14 @@ public class RegistrationControllerEventListener implements ApplicationListener<
     public void onApplicationEvent(RegistrationControllerEvent event) {
         //create verification Token For user;
         User user = event.getUser();
-        long tableNumber = event.getTableNumber();
         String token = UUID.randomUUID().toString();
 
-        userService.saveVerificationTokenForUser(user.getUserId(), tableNumber, token);
+        userService.saveVerificationTokenForUser(user.getUserId(), token);
 
         //send mail to user.
         String url = event.getApplicationUrl() +
-                "/app/verifyRegistration?token=" + token + "&tableNumber=" + tableNumber;
+                "/app/verifyRegistration?token=" + token;
+
         log.info("Registered verification token: " + token);
         log.info("Registered url: " + url);
 

@@ -8,13 +8,11 @@ import org.springframework.context.ApplicationEvent;
 public class RegistrationControllerEvent extends ApplicationEvent {
 
     private User user;
-    private Long tableNumber;
     private String applicationUrl;
 
-    public RegistrationControllerEvent(User user, long tableNumber,String applicationUrl) {
+    public RegistrationControllerEvent(User user, String applicationUrl) {
         super(user);
         this.user = user;
-        this.tableNumber = tableNumber;
         this.applicationUrl = applicationUrl;
     }
 

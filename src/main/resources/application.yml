@@ -8,5 +8,5 @@ spring:
 server:
   port: 9091
 
-secret:
-  key: ${SECRET_SUPER_KEY}
+jwt:
+  secret-key: ${SECRET_SUPER_KEY}

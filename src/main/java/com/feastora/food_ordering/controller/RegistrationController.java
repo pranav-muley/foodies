@@ -6,6 +6,7 @@ import com.feastora.food_ordering.HttpResponse.GenericResponse;
 import com.feastora.food_ordering.enums.VerificationEnum;
 import com.feastora.food_ordering.model.UserModel;
 import com.feastora.food_ordering.service.UserService;
+import io.jsonwebtoken.Jwts;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,8 +23,8 @@ public class RegistrationController extends BaseResponse {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<GenericResponse<String>> registerUser(@RequestParam long tableNumber,@RequestBody UserModel userModel, final HttpServletRequest request) {
-        GenericResponse<String> response = userService.registerUser(userModel, request, tableNumber);
+    public ResponseEntity<GenericResponse<String>> registerUser(@RequestBody UserModel userModel, final HttpServletRequest request) {
+        GenericResponse<String> response = userService.registerUser(userModel, request);
         if(response.getError() != null) {
             return conflictError(response);
         }
@@ -31,9 +32,9 @@ public class RegistrationController extends BaseResponse {
     }
 
     @GetMapping("/verifyRegistration")
-    public ResponseEntity<GenericResponse<String>> verifyToken(@RequestParam String token, @RequestParam long tableNumber) {
+    public ResponseEntity<GenericResponse<String>> verifyToken(@RequestParam String token) {
         GenericResponse<String> response = new GenericResponse<>();
-        VerificationEnum status = userService.verifyVerificationToken(token, tableNumber);
+        VerificationEnum status = userService.verifyVerificationToken(token);
         if(status == VerificationEnum.EXPIRED_TOKEN) {
             response.setError(new ResponseError("Token is Expired", "Please Register again !!!", 409));
             return new ResponseEntity<>(response, HttpStatus.CONFLICT);
