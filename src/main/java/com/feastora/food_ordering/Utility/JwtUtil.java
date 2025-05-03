@@ -52,7 +52,7 @@ public class JwtUtil {
                 .setSigningKey(SECRET_KEY)
                 .parseClaimsJws(sessionToken)
                 .getBody()
-                .get("tableNumber", Long.class);
+                .get("", Long.class);
     }
 
     public String generateSessionToken(String userId, long tableNumber, String ip, String userAgent) {

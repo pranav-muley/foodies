@@ -28,6 +28,11 @@ public class VerificationToken {
 
     private Date expiresAt; // Use for Mongo TTL (index separately)
 
+    public VerificationToken(String userId, String token) {
+        this.userId = userId;
+        this.token = token;
+    }
+
     public static VerificationToken create(String userId, String token) {
         long now = System.currentTimeMillis();
         long expiry = now + EXPIRATION_MINUTES * 60 * 1000L;
