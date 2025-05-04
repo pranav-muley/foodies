@@ -5,8 +5,13 @@ spring:
     mongodb:
       uri: ${MONGO_DB_URL}
       database: ${FOODIES_DB}
+  security:
+    user:
+      name: admin
+      password: ${SECRET_SUPER_KEY}
+
 server:
-  port: 9091
+  port: ${PORT:8080}  # ✅ Use dynamic port assigned by Render
 
 jwt:
   secret-key: ${SECRET_SUPER_KEY}
