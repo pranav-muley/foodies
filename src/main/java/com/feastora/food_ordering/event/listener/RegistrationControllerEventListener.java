@@ -1,29 +1,34 @@
 package com.feastora.food_ordering.event.listener;
 
-import com.feastora.food_ordering.entity.User;
+import com.feastora.food_ordering.Utility.JwtUtil;
 import com.feastora.food_ordering.event.RegistrationControllerEvent;
+import com.feastora.food_ordering.model.UserModel;
 import com.feastora.food_ordering.service.UserService;
+import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
-import java.util.UUID;
 @Component
 @Slf4j
 public class RegistrationControllerEventListener implements ApplicationListener<RegistrationControllerEvent> {
 
     private final UserService userService;
-    public RegistrationControllerEventListener(UserService userService) {
+    private final JwtUtil jwtUtil;
+
+    public RegistrationControllerEventListener(UserService userService, JwtUtil jwtUtil) {
         this.userService = userService;
+        this.jwtUtil = jwtUtil;
     }
 
     @Override
     public void onApplicationEvent(RegistrationControllerEvent event) {
         //create verification Token For user;
-        User user = event.getUser();
-        String token = UUID.randomUUID().toString();
-
-        userService.saveVerificationTokenForUser(user.getUserId(), token);
+        String token = event.getToken();
+        Claims claim = jwtUtil.validateToken(token);
+        userService.saveUserEntity(jwtUtil.getUserModelFromToken(token));
+        String userId = claim.get("userId", String.class);
+        userService.saveVerificationTokenForUser(userId, token);
 
         //send mail to user.
         String url = event.getApplicationUrl() +
@@ -31,6 +36,5 @@ public class RegistrationControllerEventListener implements ApplicationListener<
 
         log.info("Registered verification token: " + token);
         log.info("Registered url: " + url);
-
     }
 }

@@ -1,18 +1,19 @@
 package com.feastora.food_ordering.event;
 
 import com.feastora.food_ordering.entity.User;
+import com.feastora.food_ordering.model.UserModel;
 import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 
 @Getter
 public class RegistrationControllerEvent extends ApplicationEvent {
 
-    private User user;
-    private String applicationUrl;
+    private final String token;
+    private final String applicationUrl;
 
-    public RegistrationControllerEvent(User user, String applicationUrl) {
-        super(user);
-        this.user = user;
+    public RegistrationControllerEvent(String token, String applicationUrl) {
+        super(token);
+        this.token = token;
         this.applicationUrl = applicationUrl;
     }
 

@@ -25,7 +25,6 @@ public class User {
     private String role;
     private String mobileNum;
     private String userName;
-    @Value("\\s+|%^&")
     private String password;
     private String email;
     private boolean enabled;

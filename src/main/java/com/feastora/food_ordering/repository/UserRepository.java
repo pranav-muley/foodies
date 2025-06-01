@@ -5,9 +5,12 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.data.mongodb.repository.Update;
 
+import java.util.List;
+
 public interface UserRepository extends MongoRepository<User, String> {
     User findUserByUserName(String userName);
     User findUserByMobileNum(String mobileNum);
+    User findUserByUserNameAndMobileNum(String userName, String mobileNum);
 
     @Query("{ 'userId' : ?0 }")
     @Update("{ '$set' : { 'enabled' : true } }")

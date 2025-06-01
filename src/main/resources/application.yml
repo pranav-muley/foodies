@@ -11,7 +11,7 @@ spring:
       password: ${SECRET_SUPER_KEY}
 
 server:
-  port: ${PORT:8080}  # ✅ Use dynamic port assigned by Render
+  port: ${PORT:9091}  # ✅ Use dynamic port assigned by Render
 
 jwt:
   secret-key: ${SECRET_SUPER_KEY}

@@ -2,6 +2,11 @@ package com.feastora.food_ordering.config;
 
 import com.feastora.food_ordering.Utility.JwtUtil;
 import com.feastora.food_ordering.Utility.ThreadContextUtils;
+import com.feastora.food_ordering.entity.User;
+import com.feastora.food_ordering.filters.JwtAuthFilter;
+import com.feastora.food_ordering.mapping.MapperUtils;
+import com.feastora.food_ordering.model.UserModel;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +21,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.util.ObjectUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -29,15 +36,16 @@ public class SecurityConfig extends OncePerRequestFilter {
         this.jwtUtil = jwtUtil;
     }
 
-
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         http
-                .authorizeHttpRequests(request -> request
-                        .anyRequest().permitAll()) // Allow these URLs
-//                .authorizeHttpRequests(request -> request.anyRequest().authenticated()) // Any other requests require authentication
-                .httpBasic(Customizer.withDefaults()) // Enable HTTP Basic Authentication
-                .csrf(AbstractHttpConfigurer::disable);// Disable CSRF for simplicity in this example
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/app/register", "/app/login", "/app/verifyRegistration").permitAll()
+                        .requestMatchers("/order/edit", "/generate/qr").authenticated()
+                        .anyRequest().permitAll()
+                )
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -49,8 +57,10 @@ public class SecurityConfig extends OncePerRequestFilter {
         String sessionToken = request.getHeader("Authorization");
         String ip = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");
+
         if (request.getRequestURI().startsWith("/secure-session")) {
-            if (sessionToken == null || !jwtUtil.validateSessionToken(sessionToken, ip, userAgent)) {
+            Claims claims = jwtUtil.validateToken(sessionToken);
+            if (sessionToken == null || ObjectUtils.isEmpty(claims)) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("Invalid or stolen session token.");
                 return;
@@ -61,6 +71,17 @@ public class SecurityConfig extends OncePerRequestFilter {
         }
 
         chain.doFilter(request, response);
+
+        // Now process the response AFTER controller
+        if (request.getRequestURI().equals("/app/login") && request.getMethod().equalsIgnoreCase("GET")) {
+            Object userAttr = request.getAttribute("user");
+
+            if (userAttr instanceof User user) {
+                UserModel userModel = MapperUtils.convertObjectValueToResponseObject(user, UserModel.class);
+                String token = jwtUtil.generateTokenForUserModel(userModel);
+                response.setHeader("Authorization", "Bearer " + token);
+            }
+        }
     }
 
     @Bean

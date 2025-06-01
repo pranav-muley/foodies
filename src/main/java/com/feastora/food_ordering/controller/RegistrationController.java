@@ -7,6 +7,7 @@ import com.feastora.food_ordering.enums.VerificationEnum;
 import com.feastora.food_ordering.model.UserModel;
 import com.feastora.food_ordering.service.UserService;
 import io.jsonwebtoken.Jwts;
+import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,17 @@ public class RegistrationController extends BaseResponse {
 
     public RegistrationController(UserService userService) {
         this.userService = userService;
+    }
+
+    @GetMapping("/login")
+    public ResponseEntity<GenericResponse<String>> login(@RequestParam String username, @RequestParam String password) {
+        GenericResponse<String> response = new GenericResponse<>();
+        try {
+            response = userService.getLoginDetails(username, password);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+        return newResponseOk(response);
     }
 
     @PostMapping("/register")
