@@ -4,14 +4,14 @@ spring:
   data:
     mongodb:
       uri: ${MONGO_DB_URL}
-      database: ${FOODIES_DB}
+      database: feastora
   security:
     user:
       name: admin
-      password: ${SECRET_SUPER_KEY}
+      password: admin@321
 
 server:
-  port: ${PORT:9091}  # ✅ Use dynamic port assigned by Render
+  port: ${PORT:9091}
 
 jwt:
   secret-key: ${SECRET_SUPER_KEY}
