@@ -5,4 +5,8 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface VerificationTokenRepository extends MongoRepository<VerificationToken, String> {
      VerificationToken findVerificationTokenByToken(String token);
+
+    VerificationToken getVerificationTokensByUserId(String userId);
+
+    void deleteVerificationTokensByUserId(String userId);
 }

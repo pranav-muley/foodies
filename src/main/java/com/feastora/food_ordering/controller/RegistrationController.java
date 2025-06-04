@@ -3,11 +3,10 @@ package com.feastora.food_ordering.controller;
 import com.feastora.food_ordering.Errorhandling.ResponseError;
 import com.feastora.food_ordering.HttpResponse.BaseResponse;
 import com.feastora.food_ordering.HttpResponse.GenericResponse;
+import com.feastora.food_ordering.Utility.JwtUtil;
 import com.feastora.food_ordering.enums.VerificationEnum;
 import com.feastora.food_ordering.model.UserModel;
 import com.feastora.food_ordering.service.UserService;
-import io.jsonwebtoken.Jwts;
-import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,16 +17,18 @@ import org.springframework.web.bind.annotation.*;
 public class RegistrationController extends BaseResponse {
 
     private final UserService userService;
+    private final JwtUtil jwtUtil;
 
-    public RegistrationController(UserService userService) {
+    public RegistrationController(UserService userService, JwtUtil jwtUtil) {
         this.userService = userService;
+        this.jwtUtil = jwtUtil;
     }
 
-    @GetMapping("/login")
-    public ResponseEntity<GenericResponse<String>> login(@RequestParam String username, @RequestParam String password) {
+    @PostMapping("/login")
+    public ResponseEntity<GenericResponse<String>> login(@RequestBody UserModel userModel) {
         GenericResponse<String> response = new GenericResponse<>();
         try {
-            response = userService.getLoginDetails(username, password);
+            response = userService.getLoginDetails(userModel);
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -54,7 +55,7 @@ public class RegistrationController extends BaseResponse {
             response.setError(new ResponseError("Token is invalid", "Please try again!!!", 409));
             return new ResponseEntity<>(response, HttpStatus.CONFLICT);
         } else {
-            response.setData("User Verified Successfully!!!");
+            response.setData(String.format("Great! %s has been verified Successfully!!!", jwtUtil.extractValueByKey(token, "username")));
             return new ResponseEntity<>(response, HttpStatus.OK);
         }
     }

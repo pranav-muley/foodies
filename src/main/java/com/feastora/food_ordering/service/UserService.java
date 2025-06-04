@@ -8,15 +8,18 @@ import com.feastora.food_ordering.entity.User;
 import com.feastora.food_ordering.entity.VerificationToken;
 import com.feastora.food_ordering.enums.VerificationEnum;
 import com.feastora.food_ordering.event.RegistrationControllerEvent;
+import com.feastora.food_ordering.mapping.MapperUtils;
 import com.feastora.food_ordering.model.UserModel;
 import com.feastora.food_ordering.repository.UserRepository;
-import com.feastora.food_ordering.repository.VerificationTokenRepository;
+import io.jsonwebtoken.Claims;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
 
 import java.util.Arrays;
 import java.util.Date;
@@ -26,21 +29,18 @@ public class UserService extends BaseResponse {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final VerificationTokenRepository verificationTokenRepository;
     private final ApplicationEventPublisher publisher;
     private final ServerConfig serverConfig;
-    private static final int EXPIRATION_DAYS = 1;
     private final JwtUtil jwtUtil;
-    private final ServletRequest httpServletRequest;
+    private final VerificationTokenService verificationTokenService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, VerificationTokenRepository verificationTokenRepository, ApplicationEventPublisher publisher, ServerConfig serverConfig, JwtUtil jwtUtil, ServletRequest httpServletRequest) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, ApplicationEventPublisher publisher, ServerConfig serverConfig, JwtUtil jwtUtil, VerificationTokenService verificationTokenService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.verificationTokenRepository = verificationTokenRepository;
         this.publisher = publisher;
         this.serverConfig = serverConfig;
         this.jwtUtil = jwtUtil;
-        this.httpServletRequest = httpServletRequest;
+        this.verificationTokenService = verificationTokenService;
     }
 
 
@@ -51,24 +51,35 @@ public class UserService extends BaseResponse {
         }
         String token = jwtUtil.generateTokenForUserModel(userModel);
         publisher.publishEvent(new RegistrationControllerEvent(
-                token, serverConfig.applicationUrl(request)
+                token, userModel.getUserName(), userModel.getEmail(), serverConfig.applicationUrl(request)
         ));
         return newRestResponseData(String.format("Congrats, %s registered successfully !!!",
                 Arrays.stream(userModel.getUserName().split("\\s")).toArray()[0]));
     }
 
-    public void saveVerificationTokenForUser(String userId, String token) {
-        verificationTokenRepository.save(create(userId, token));
+    public void saveVerificationTokenForUser(String token) {
+        String userId = jwtUtil.getUserId(token);
+        Date expiry = jwtUtil.extractExpiration(token);
+        long now = System.currentTimeMillis();
+        VerificationToken verificationToken = VerificationToken.builder()
+                .userId(userId)
+                .token(token)
+                .createdAtEpoch(now)
+                .expiresAtEpoch(expiry.getTime())
+                .expiresAt(expiry)
+                .build();
+        verificationTokenService.saveVerificationToken(verificationToken);
     }
 
     public VerificationEnum verifyVerificationToken(String token) {
         try {
-            VerificationToken verificationToken = verificationTokenRepository.findVerificationTokenByToken(token);
-            if (verificationToken == null) {
-                return VerificationEnum.INVALID_TOKEN;
+            Claims claims = jwtUtil.validateToken(token);
+            if (ObjectUtils.isEmpty(claims) || jwtUtil.isTokenExpired(token)) {
+                return VerificationEnum.EXPIRED_TOKEN;
             }
-            String userId = verificationToken.getUserId();
-            userRepository.enableUserByUserId(userId);
+            UserModel userModel = jwtUtil.getUserModelFromToken(token);
+            saveUserEntity(userModel);
+            saveVerificationTokenForUser(token);
             return VerificationEnum.VALID_TOKEN;
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -76,31 +87,35 @@ public class UserService extends BaseResponse {
         }
     }
 
-    public GenericResponse<String> getLoginDetails(String username, String password) {
-        if (StringUtils.isBlank(username) || StringUtils.isBlank(password)) {
+    public GenericResponse<String> getLoginDetails(UserModel userModel) {
+        if (ObjectUtils.isEmpty(userModel) || StringUtils.isBlank(userModel.getUserName()) || StringUtils.isBlank(userModel.getPassword())) {
             return newRestErrorResponse(400, "UserName/ password is mismatch", "check username/password");
         }
-        User user = userRepository.findUserByUserName(username);
+        String email = userModel.getEmail();
+        String password = userModel.getPassword();
+        User user = userRepository.findUserByEmail(email);
         if (user == null) {
-            return newRestErrorResponse(404, "User not found", "Register User");
+            return newRestErrorResponse(404, "User not found", "Email Not Found");
         }
         if (!passwordEncoder.matches(password, user.getPassword())) {
             return newRestErrorResponse(400, "Password does not match", "check password");
         }
-        httpServletRequest.setAttribute("user", user);
-        return newRestResponseData("Welcome," + user.getUserName() + " Successfully logged in");
-    }
 
-    public static VerificationToken create(String userId, String token) {
-        long now = System.currentTimeMillis();
-        long expiry = now + EXPIRATION_DAYS * 24 * 60 * 60 * 1000L;
-        return VerificationToken.builder()
-                .userId(userId)
-                .token(token)
-                .createdAtEpoch(now)
-                .expiresAtEpoch(expiry)
-                .expiresAt(new Date(expiry))
-                .build();
+        VerificationToken verifiedUser = verificationTokenService.getVerificationTokenByUserId(user.getUserId());
+        if (verifiedUser == null) {
+           return newRestErrorResponse(404, "User is not Verified", "Please register first");
+        }
+        String token = verifiedUser.getToken();
+        UserModel newUser = MapperUtils.convertObjectValueToResponseObject(user, UserModel.class);
+        if(ObjectUtils.isEmpty(token) || ObjectUtils.isEmpty(newUser)) {
+            return newRestErrorResponse(400, "Token is empty", "check token");
+        }
+        if(jwtUtil.isTokenExpired(token)) {
+            token = jwtUtil.generateTokenForUserModel(newUser);
+            verifiedUser.setToken(token);
+            verificationTokenService.updateVerificationTokenForUserById(verifiedUser.getUserId(), verifiedUser);
+        }
+        return newRestResponseData("Welcome," + user.getUserName() + " Successfully logged in");
     }
 
     public void saveUserEntity(UserModel userModel) {

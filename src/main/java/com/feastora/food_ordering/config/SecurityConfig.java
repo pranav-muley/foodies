@@ -2,10 +2,7 @@ package com.feastora.food_ordering.config;
 
 import com.feastora.food_ordering.Utility.JwtUtil;
 import com.feastora.food_ordering.Utility.ThreadContextUtils;
-import com.feastora.food_ordering.entity.User;
 import com.feastora.food_ordering.filters.JwtAuthFilter;
-import com.feastora.food_ordering.mapping.MapperUtils;
-import com.feastora.food_ordering.model.UserModel;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,7 +11,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -71,17 +67,6 @@ public class SecurityConfig extends OncePerRequestFilter {
         }
 
         chain.doFilter(request, response);
-
-        // Now process the response AFTER controller
-        if (request.getRequestURI().equals("/app/login") && request.getMethod().equalsIgnoreCase("GET")) {
-            Object userAttr = request.getAttribute("user");
-
-            if (userAttr instanceof User user) {
-                UserModel userModel = MapperUtils.convertObjectValueToResponseObject(user, UserModel.class);
-                String token = jwtUtil.generateTokenForUserModel(userModel);
-                response.setHeader("Authorization", "Bearer " + token);
-            }
-        }
     }
 
     @Bean

@@ -8,7 +8,7 @@ import org.springframework.data.mongodb.repository.Update;
 import java.util.List;
 
 public interface UserRepository extends MongoRepository<User, String> {
-    User findUserByUserName(String userName);
+    User findUserByEmail(String email);
     User findUserByMobileNum(String mobileNum);
     User findUserByUserNameAndMobileNum(String userName, String mobileNum);
 
