@@ -2,16 +2,12 @@ package com.feastora.food_ordering.controller;
 
 import com.feastora.food_ordering.HttpResponse.BaseResponse;
 import com.feastora.food_ordering.HttpResponse.GenericResponse;
-import com.feastora.food_ordering.entity.Order;
 import com.feastora.food_ordering.entity.Product;
 import com.feastora.food_ordering.enums.OrderStatusEnum;
 import com.feastora.food_ordering.model.OrderModel;
-import com.feastora.food_ordering.repository.OrderRepository;
 import com.feastora.food_ordering.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.bind.annotation.*;
 

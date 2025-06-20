@@ -1,17 +1,15 @@
 package com.feastora.food_ordering.filters;
 
 import com.feastora.food_ordering.Utility.JwtUtil;
-import com.feastora.food_ordering.model.UserModel;
-import io.jsonwebtoken.Claims;
+import com.feastora.food_ordering.Utility.ThreadContextUtils;
+import com.feastora.food_ordering.constants.Constants;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -36,7 +34,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        final String authHeader = request.getHeader("Authorization");
+        String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -44,26 +42,43 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         String token = authHeader.substring(7);
-        try {
-            Claims claims = jwtUtil.validateToken(token);
-            String userId = claims.get("userId", String.class);
-            String role = claims.get("role", String.class); // Make sure your token contains this
 
-            // Add user to security context
+        try {
+            if (request.getRequestURI().startsWith("/secure-session")) {
+                if (jwtUtil.validateSessionToken(token, request)) {
+                    ThreadContextUtils.setUserId(jwtUtil.getUserId(token));
+                    ThreadContextUtils.setTableNumber(jwtUtil.getTableNumber(token));
+                } else {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid session token");
+                    return;
+                }
+            } else {
+                if (!jwtUtil.validateToken(token)) {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token");
+                    return;
+                }
+            }
+
+            String userId = (String) jwtUtil.extractValueByKey(token, Constants.USERID);
+            String role = (String) jwtUtil.extractValueByKey(token, Constants.USER_ROLE);
+            if (role == null) role = "GUEST";
+
+            List<SimpleGrantedAuthority> authorities =
+                    role != null ? List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
+                            : Collections.emptyList();
+
             UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
+                    new UsernamePasswordAuthenticationToken(userId, null, authorities);
+
             SecurityContextHolder.getContext().setAuthentication(authToken);
 
         } catch (ExpiredJwtException e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("Token expired. Please log in again.");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token expired. Please log in again.");
             return;
         } catch (JwtException e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("Invalid token.");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
             return;
         }
-
         filterChain.doFilter(request, response);
     }
 }

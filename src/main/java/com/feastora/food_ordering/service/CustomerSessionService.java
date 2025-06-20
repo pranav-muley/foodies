@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 
+import java.time.Duration;
 import java.util.Date;
 import java.util.UUID;
 
@@ -19,31 +20,24 @@ public class CustomerSessionService extends BaseResponse {
     private final CustomerSessionRepository sessionRepository;
     private final JwtUtil jwtUtil;
 
+    private static final long SESSION_DURATION_MS = Duration.ofHours(2).toMillis();
+
     public CustomerSessionService(CustomerSessionRepository sessionRepository, JwtUtil jwtUtil) {
         this.sessionRepository = sessionRepository;
         this.jwtUtil = jwtUtil;
     }
 
-    public void createSession(String userId, Long tableNumber, String userAgent, String ipAddress, String sessionToken) {
+    public CustomerSessionModel createSession(String userId, Long tableNumber, String userAgent, String ipAddress, String sessionToken) {
         CustomerSessionModel session = new CustomerSessionModel();
+        long now = System.currentTimeMillis();
         session.setSessionToken(sessionToken);
         session.setUserId(userId);
         session.setTableNumber(tableNumber);
         session.setUserAgent(userAgent);
         session.setIpAddress(ipAddress);
-        session.setCreatedAt(System.currentTimeMillis());
-        session.setExpiresAt(System.currentTimeMillis() + 2 * 60 * 60 * 1000L); // 2 hours
-        sessionRepository.save(session);
-    }
-
-    public boolean validateSession(String sessionToken, HttpServletRequest request) {
-        CustomerSessionModel session = sessionRepository.findBySessionToken(sessionToken);
-        if (session == null || session.getExpiresAt() < System.currentTimeMillis()) return false;
-
-        String reqUserAgent = request.getHeader("User-Agent");
-        String reqIp = request.getRemoteAddr();
-
-        return session.getUserAgent().equals(reqUserAgent) && session.getIpAddress().equals(reqIp);
+        session.setCreatedAt(now);
+        session.setExpiresAt(now + SESSION_DURATION_MS);
+        return sessionRepository.save(session);
     }
 
     public GenericResponse<String> refreshCustomerSessionToken(String oldToken) {
@@ -53,30 +47,30 @@ public class CustomerSessionService extends BaseResponse {
             return newRestErrorResponse(403, "Session expired");
         }
 
-        String newSessionId = UUID.randomUUID().toString();
-        long newExpiry = System.currentTimeMillis() + 2 * 60 * 60 * 1000L;
+        String newSessionToken = UUID.randomUUID().toString();
+        long now = System.currentTimeMillis();
 
-        session.setSessionToken(newSessionId);
-        session.setCreatedAt(System.currentTimeMillis());
-        session.setExpiresAt(newExpiry);
-
+        session.setSessionToken(newSessionToken);
+        session.setCreatedAt(now);
+        session.setExpiresAt(now + SESSION_DURATION_MS);
         sessionRepository.save(session);
-        return newRestResponseData(newSessionId);
+
+        return newRestResponseData(newSessionToken);
     }
 
     public String initiateSession(String token, HttpServletRequest request) {
-        Claims claims = jwtUtil.validateToken(token);
-        if (claims == null || claims.getExpiration() == null || claims.getExpiration().before(new Date())) {
-            throw new IllegalArgumentException("Token has expired or is invalid.");
+        if (!jwtUtil.validateSessionToken(token, request)) {
+            throw new IllegalArgumentException("Token is invalid or expired.");
         }
 
-        String userId = jwtUtil.getUserId(claims.getSubject());
-        Long tableNumber = jwtUtil.getTableNumber(claims.getSubject());
+        String userId = jwtUtil.getUserId(token);
+        Long tableNumber = jwtUtil.getTableNumber(token);
         String ip = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");
 
         String sessionToken = jwtUtil.generateSessionToken(userId, tableNumber, ip, userAgent);
-        createSession(userId, tableNumber, userAgent, ip, sessionToken);
-        return sessionToken;
+        if (sessionToken == null) throw new IllegalArgumentException("Failed to generate session token.");
+
+        return createSession(userId, tableNumber, userAgent, ip, sessionToken).getSessionToken();
     }
 }

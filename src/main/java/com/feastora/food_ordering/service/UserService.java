@@ -4,18 +4,15 @@ import com.feastora.food_ordering.HttpResponse.BaseResponse;
 import com.feastora.food_ordering.HttpResponse.GenericResponse;
 import com.feastora.food_ordering.Utility.JwtUtil;
 import com.feastora.food_ordering.config.ServerConfig;
+import com.feastora.food_ordering.constants.Constants;
 import com.feastora.food_ordering.entity.User;
 import com.feastora.food_ordering.entity.VerificationToken;
 import com.feastora.food_ordering.enums.VerificationEnum;
 import com.feastora.food_ordering.event.RegistrationControllerEvent;
-import com.feastora.food_ordering.mapping.MapperUtils;
 import com.feastora.food_ordering.model.UserModel;
 import com.feastora.food_ordering.repository.UserRepository;
-import io.jsonwebtoken.Claims;
 import io.micrometer.common.util.StringUtils;
-import jakarta.servlet.ServletRequest;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -43,13 +40,16 @@ public class UserService extends BaseResponse {
         this.verificationTokenService = verificationTokenService;
     }
 
-
     public GenericResponse<String> registerUser(UserModel userModel, final HttpServletRequest request) {
         User userByMobileNum = userRepository.findUserByUserNameAndMobileNum(userModel.getUserName(), userModel.getMobileNum());
         if (userByMobileNum != null) {
             return newRestErrorResponse(409, "User with this mobile Number and username already exists");
         }
-        String token = jwtUtil.generateTokenForUserModel(userModel);
+        User user = convertUserModelToUser(userModel);
+        if (ObjectUtils.isEmpty(user)) {
+            return newRestErrorResponse(409, "user cant converted");
+        }
+        String token = jwtUtil.generateTokenForUser(user);
         publisher.publishEvent(new RegistrationControllerEvent(
                 token, userModel.getUserName(), userModel.getEmail(), serverConfig.applicationUrl(request)
         ));
@@ -73,12 +73,12 @@ public class UserService extends BaseResponse {
 
     public VerificationEnum verifyVerificationToken(String token) {
         try {
-            Claims claims = jwtUtil.validateToken(token);
-            if (ObjectUtils.isEmpty(claims) || jwtUtil.isTokenExpired(token)) {
+            boolean isValid = jwtUtil.validateUserToken(token, "USER");
+            if (!isValid) {
                 return VerificationEnum.EXPIRED_TOKEN;
             }
-            UserModel userModel = jwtUtil.getUserModelFromToken(token);
-            saveUserEntity(userModel);
+            User user = (User) jwtUtil.extractValueByKey(token, Constants.USER);
+            userRepository.save(user);
             saveVerificationTokenForUser(token);
             return VerificationEnum.VALID_TOKEN;
         } catch (Exception e) {
@@ -106,19 +106,18 @@ public class UserService extends BaseResponse {
            return newRestErrorResponse(404, "User is not Verified", "Please register first");
         }
         String token = verifiedUser.getToken();
-        UserModel newUser = MapperUtils.convertObjectValueToResponseObject(user, UserModel.class);
-        if(ObjectUtils.isEmpty(token) || ObjectUtils.isEmpty(newUser)) {
+        if(ObjectUtils.isEmpty(token) || ObjectUtils.isEmpty(user)) {
             return newRestErrorResponse(400, "Token is empty", "check token");
         }
         if(jwtUtil.isTokenExpired(token)) {
-            token = jwtUtil.generateTokenForUserModel(newUser);
+            token = jwtUtil.generateTokenForUser(user);
             verifiedUser.setToken(token);
             verificationTokenService.updateVerificationTokenForUserById(verifiedUser.getUserId(), verifiedUser);
         }
         return newRestResponseData("Welcome," + user.getUserName() + " Successfully logged in");
     }
 
-    public void saveUserEntity(UserModel userModel) {
+    public User convertUserModelToUser(UserModel userModel) {
         User user = new User();
         user.setUserId(userModel.getUserId());
         user.setUserName(userModel.getUserName());
@@ -128,6 +127,6 @@ public class UserService extends BaseResponse {
         user.setMobileNum(userModel.getMobileNum());
         user.setLastModified(System.currentTimeMillis());
         user.setDateCreated(System.currentTimeMillis());
-        userRepository.save(user);
+        return user;
     }
 }

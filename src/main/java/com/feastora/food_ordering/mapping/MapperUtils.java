@@ -47,6 +47,18 @@ public final class MapperUtils {
         return null;
     }
 
+    public static <T> T convertResponseObjectValueToObject(Object source, Class<T> targetClass) {
+        if(ObjectUtils.isEmpty(source))
+            return null;
+        try{
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.convertValue(source, targetClass);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public static <T> T convertStringToResponseObject(String response, Class<T> claz) throws JsonProcessingException {
         if (ObjectUtils.isEmpty(response)) return null;
         try {

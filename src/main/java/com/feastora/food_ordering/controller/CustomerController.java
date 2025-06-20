@@ -39,16 +39,5 @@ public class CustomerController extends BaseResponse {
             return badRequest(newRestErrorResponse(400, "Invalid QR token"));
         }
     }
-
-
-    @PostMapping("/order")
-    public ResponseEntity<GenericResponse<String>> placeOrder(@RequestHeader("Authorization") String bearerToken, HttpServletRequest request) {
-        String sessionToken = bearerToken.replace("Bearer ", "");
-        boolean valid = sessionService.validateSession(sessionToken, request);
-
-        if (!valid) return unauthorized(newRestErrorResponse(414, "Session expired or invalid"));
-
-        return newResponseOk(newRestResponseData("Order placed"));
-    }
 }
 

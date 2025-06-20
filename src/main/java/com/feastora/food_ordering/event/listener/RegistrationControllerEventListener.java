@@ -20,6 +20,9 @@ public class RegistrationControllerEventListener implements ApplicationListener<
         String email = event.getEmail();
         String applicationUrl = event.getApplicationUrl();
 
-        emailService.sendVerificationEmail(email, userName, token, applicationUrl);
+        boolean isSend = emailService.sendVerificationEmail(email, userName, token, applicationUrl);
+        if (!isSend) {
+            throw new RuntimeException("Failed to send verification email");
+        }
     }
 }
