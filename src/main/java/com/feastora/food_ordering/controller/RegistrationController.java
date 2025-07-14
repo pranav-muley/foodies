@@ -26,7 +26,7 @@ public class RegistrationController extends BaseResponse {
 
     @PostMapping("/login")
     public ResponseEntity<GenericResponse<String>> login(@RequestBody UserModel userModel) {
-        GenericResponse<String> response = new GenericResponse<>();
+            GenericResponse<String> response = new GenericResponse<>();
         try {
             response = userService.getLoginDetails(userModel);
         } catch (Exception e) {

@@ -1,9 +1,11 @@
 package com.feastora.food_ordering.Utility;
 
+import com.feastora.food_ordering.mapping.MapperUtils;
 import com.feastora.food_ordering.model.UserModel;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import org.apache.catalina.mapper.Mapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +13,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Date;
+import java.util.LinkedHashMap;
 
 @Component
 public class JwtUtil {
@@ -55,7 +58,6 @@ public class JwtUtil {
 
     public String generateTokenForUserModel(UserModel userModel) {
         return buildToken(Jwts.builder()
-                .claim("userId", userModel.getUserId())
                 .claim("userName", userModel.getUserName())
                 .claim("userModel", userModel), TOKEN_EXPIRY_MILLIS);
     }
@@ -63,7 +65,9 @@ public class JwtUtil {
     public UserModel getUserModelFromToken(String token) {
         try {
            Claims claims = getAllClaims(token);
-           return claims.get("userModel", UserModel.class);
+            Object user = claims.get("userModel");
+           UserModel model =  MapperUtils.convertObjectValueToResponseObject(user, UserModel.class);
+           return model;
         } catch (Exception e) {
             return null;
         }
@@ -77,7 +81,7 @@ public class JwtUtil {
 
     public Claims validateToken(String token) {
         try {
-            return getAllClaims(token);
+            return isTokenExpired(token) ? null : getAllClaims(token);
         } catch (JwtException e) {
             return null;
         }

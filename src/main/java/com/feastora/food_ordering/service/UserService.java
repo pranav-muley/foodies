@@ -45,24 +45,23 @@ public class UserService extends BaseResponse {
 
 
     public GenericResponse<String> registerUser(UserModel userModel, final HttpServletRequest request) {
-        User userByMobileNum = userRepository.findUserByUserNameAndMobileNum(userModel.getUserName(), userModel.getMobileNum());
-        if (userByMobileNum != null) {
-            return newRestErrorResponse(409, "User with this mobile Number and username already exists");
+        User userEmailExists = userRepository.findUserByEmail(userModel.getEmail());
+        if (userEmailExists != null) {
+            return newRestErrorResponse(409, "User with this email already exists");
         }
         String token = jwtUtil.generateTokenForUserModel(userModel);
         publisher.publishEvent(new RegistrationControllerEvent(
                 token, userModel.getUserName(), userModel.getEmail(), serverConfig.applicationUrl(request)
         ));
-        return newRestResponseData(String.format("Congrats, %s registered successfully !!!",
+        return newRestResponseData(String.format("Congrats, %s registered successfully Please Verify Your Register Email!!!",
                 Arrays.stream(userModel.getUserName().split("\\s")).toArray()[0]));
     }
 
-    public void saveVerificationTokenForUser(String token) {
-        String userId = jwtUtil.getUserId(token);
+    public void saveVerificationTokenForUser(String token, User user) {
         Date expiry = jwtUtil.extractExpiration(token);
         long now = System.currentTimeMillis();
         VerificationToken verificationToken = VerificationToken.builder()
-                .userId(userId)
+                .userId(user.get_id())
                 .token(token)
                 .createdAtEpoch(now)
                 .expiresAtEpoch(expiry.getTime())
@@ -78,8 +77,8 @@ public class UserService extends BaseResponse {
                 return VerificationEnum.EXPIRED_TOKEN;
             }
             UserModel userModel = jwtUtil.getUserModelFromToken(token);
-            saveUserEntity(userModel);
-            saveVerificationTokenForUser(token);
+           User user = saveUserEntity(userModel);
+            saveVerificationTokenForUser(token, user);
             return VerificationEnum.VALID_TOKEN;
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -88,8 +87,8 @@ public class UserService extends BaseResponse {
     }
 
     public GenericResponse<String> getLoginDetails(UserModel userModel) {
-        if (ObjectUtils.isEmpty(userModel) || StringUtils.isBlank(userModel.getUserName()) || StringUtils.isBlank(userModel.getPassword())) {
-            return newRestErrorResponse(400, "UserName/ password is mismatch", "check username/password");
+        if (ObjectUtils.isEmpty(userModel) || StringUtils.isBlank(userModel.getEmail()) || StringUtils.isBlank(userModel.getPassword())) {
+            return newRestErrorResponse(400, "Email/ password is mismatch", "check username/password");
         }
         String email = userModel.getEmail();
         String password = userModel.getPassword();
@@ -101,7 +100,7 @@ public class UserService extends BaseResponse {
             return newRestErrorResponse(400, "Password does not match", "check password");
         }
 
-        VerificationToken verifiedUser = verificationTokenService.getVerificationTokenByUserId(user.getUserId());
+        VerificationToken verifiedUser = verificationTokenService.getVerificationTokenByUserId(user.get_id());
         if (verifiedUser == null) {
            return newRestErrorResponse(404, "User is not Verified", "Please register first");
         }
@@ -118,9 +117,8 @@ public class UserService extends BaseResponse {
         return newRestResponseData("Welcome," + user.getUserName() + " Successfully logged in");
     }
 
-    public void saveUserEntity(UserModel userModel) {
+    public User saveUserEntity(UserModel userModel) {
         User user = new User();
-        user.setUserId(userModel.getUserId());
         user.setUserName(userModel.getUserName());
         user.setEmail(userModel.getEmail());
         user.setPassword(passwordEncoder.encode(userModel.getPassword()));
@@ -128,6 +126,6 @@ public class UserService extends BaseResponse {
         user.setMobileNum(userModel.getMobileNum());
         user.setLastModified(System.currentTimeMillis());
         user.setDateCreated(System.currentTimeMillis());
-        userRepository.save(user);
+       return userRepository.save(user);
     }
 }

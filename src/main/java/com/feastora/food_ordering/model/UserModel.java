@@ -1,6 +1,7 @@
 package com.feastora.food_ordering.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.feastora.food_ordering.entity.Order;
 import com.feastora.food_ordering.entity.Product;
 import lombok.Builder;
@@ -15,11 +16,10 @@ import java.util.UUID;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-
 @JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserModel {
-    @Builder.Default
-    private String userId = UUID.randomUUID().toString();
+    private String userId;
     private String userName;
     private String password;
     private String email;
