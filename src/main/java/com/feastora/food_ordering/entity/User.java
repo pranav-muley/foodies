@@ -21,7 +21,6 @@ public class User {
     @Id
     private String _id;
 
-    private String userId;
     private String role;
     private String mobileNum;
     private String userName;

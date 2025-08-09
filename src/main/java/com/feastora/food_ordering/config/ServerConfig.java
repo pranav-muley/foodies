@@ -10,7 +10,6 @@ public class ServerConfig {
 
     public String applicationUrl(HttpServletRequest request) {
         return "http://" + request.getServerName() +
-                ":" + request.getServerPort() +
-                request.getContextPath();
+                ":" + request.getContextPath();
     }
 }

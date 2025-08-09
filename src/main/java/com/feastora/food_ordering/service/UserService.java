@@ -13,13 +13,11 @@ import com.feastora.food_ordering.model.UserModel;
 import com.feastora.food_ordering.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.micrometer.common.util.StringUtils;
-import jakarta.servlet.ServletRequest;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ObjectUtils;
+import org.apache.commons.lang3.*;
 
 import java.util.Arrays;
 import java.util.Date;
