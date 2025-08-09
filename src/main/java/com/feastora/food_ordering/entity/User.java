@@ -25,7 +25,10 @@ public class User {
     private String mobileNum;
     private String userName;
     private String password;
+
+    @Indexed(unique = true)
     private String email;
+
     private boolean enabled;
     private long dateCreated;
     private long lastModified;

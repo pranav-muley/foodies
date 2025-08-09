@@ -12,7 +12,6 @@ import com.feastora.food_ordering.mapping.MapperUtils;
 import com.feastora.food_ordering.model.UserModel;
 import com.feastora.food_ordering.repository.UserRepository;
 import io.jsonwebtoken.Claims;
-import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +20,7 @@ import org.apache.commons.lang3.*;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Optional;
 
 @Service
 public class UserService extends BaseResponse {
@@ -85,34 +85,40 @@ public class UserService extends BaseResponse {
     }
 
     public GenericResponse<String> getLoginDetails(UserModel userModel) {
-        if (ObjectUtils.isEmpty(userModel) || StringUtils.isBlank(userModel.getEmail()) || StringUtils.isBlank(userModel.getPassword())) {
+        if (ObjectUtils.isEmpty(userModel) || StringUtils.isAnyBlank(userModel.getEmail(), userModel.getPassword())) {
             return newRestErrorResponse(400, "Email/ password is mismatch", "check username/password");
         }
-        String email = userModel.getEmail();
-        String password = userModel.getPassword();
-        User user = userRepository.findUserByEmail(email);
-        if (user == null) {
-            return newRestErrorResponse(404, "User not found", "Email Not Found");
-        }
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            return newRestErrorResponse(400, "Password does not match", "check password");
-        }
+        try {
+            String email = userModel.getEmail();
+            String password = userModel.getPassword();
+            Optional<User> users = userRepository.getUserByEmail(email);
+            User user = users.orElse(null);
+            if (ObjectUtils.isEmpty(user)) {
+                return newRestErrorResponse(404, "User not found", "Email Not Found");
+            }
+            if (!passwordEncoder.matches(password, user.getPassword())) {
+                return newRestErrorResponse(400, "Password does not match", "check password");
+            }
 
-        VerificationToken verifiedUser = verificationTokenService.getVerificationTokenByUserId(user.get_id());
-        if (verifiedUser == null) {
-           return newRestErrorResponse(404, "User is not Verified", "Please register first");
+            VerificationToken verifiedUser = verificationTokenService.getVerificationTokenByUserId(user.get_id());
+            if (verifiedUser == null) {
+                return newRestErrorResponse(404, "User is not Verified", "Please register first");
+            }
+            String token = verifiedUser.getToken();
+            UserModel newUser = MapperUtils.convertObjectValueToResponseObject(user, UserModel.class);
+            if (ObjectUtils.isEmpty(token) || ObjectUtils.isEmpty(newUser)) {
+                return newRestErrorResponse(400, "Token is empty", "check token");
+            }
+            if (jwtUtil.isTokenExpired(token)) {
+                token = jwtUtil.generateTokenForUserModel(newUser);
+                verifiedUser.setToken(token);
+                verificationTokenService.updateVerificationTokenForUserById(verifiedUser.getUserId(), verifiedUser);
+            }
+            return newRestResponseData("Welcome," + user.getUserName() + " Successfully logged in");
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return newRestErrorResponse(400, "Error", "check email/password");
         }
-        String token = verifiedUser.getToken();
-        UserModel newUser = MapperUtils.convertObjectValueToResponseObject(user, UserModel.class);
-        if(ObjectUtils.isEmpty(token) || ObjectUtils.isEmpty(newUser)) {
-            return newRestErrorResponse(400, "Token is empty", "check token");
-        }
-        if(jwtUtil.isTokenExpired(token)) {
-            token = jwtUtil.generateTokenForUserModel(newUser);
-            verifiedUser.setToken(token);
-            verificationTokenService.updateVerificationTokenForUserById(verifiedUser.getUserId(), verifiedUser);
-        }
-        return newRestResponseData("Welcome," + user.getUserName() + " Successfully logged in");
     }
 
     public User saveUserEntity(UserModel userModel) {

@@ -4,8 +4,7 @@ import com.feastora.food_ordering.entity.User;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.data.mongodb.repository.Query;
 import org.springframework.data.mongodb.repository.Update;
-
-import java.util.List;
+import java.util.Optional;
 
 public interface UserRepository extends MongoRepository<User, String> {
     User findUserByEmail(String email);
@@ -19,4 +18,6 @@ public interface UserRepository extends MongoRepository<User, String> {
     @Query("{ 'userId' : ?0 }")
     @Update("{'$set' :  {'lastModified' : System.currentTimeMillis() } }")
     void updateLastModifiedUserByUserId(String userId);
+
+    Optional<User> getUserByEmail(String email);
 }
