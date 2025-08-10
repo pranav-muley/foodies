@@ -9,7 +9,6 @@ public class ServerConfig {
     public String url;
 
     public String applicationUrl(HttpServletRequest request) {
-        return "http://" + request.getServerName() +
-                ":" + request.getContextPath();
+        return "http://" + request.getServerName() + request.getContextPath();
     }
 }
