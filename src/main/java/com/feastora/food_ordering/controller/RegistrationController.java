@@ -26,7 +26,7 @@ public class RegistrationController extends BaseResponse {
 
     @PostMapping("/login")
     public ResponseEntity<GenericResponse<String>> login(@RequestBody UserModel userModel) {
-            GenericResponse<String> response = new GenericResponse<>();
+        GenericResponse<String> response = new GenericResponse<>();
         try {
             response = userService.getLoginDetails(userModel);
         } catch (Exception e) {
@@ -38,7 +38,7 @@ public class RegistrationController extends BaseResponse {
     @PostMapping("/register")
     public ResponseEntity<GenericResponse<String>> registerUser(@RequestBody UserModel userModel, final HttpServletRequest request) {
         GenericResponse<String> response = userService.registerUser(userModel, request);
-        if(response.getError() != null) {
+        if (response.getError() != null) {
             return conflictError(response);
         }
         return newResponseOk(response);
@@ -48,15 +48,12 @@ public class RegistrationController extends BaseResponse {
     public ResponseEntity<GenericResponse<String>> verifyToken(@RequestParam String token) {
         GenericResponse<String> response = new GenericResponse<>();
         VerificationEnum status = userService.verifyVerificationToken(token);
-        if(status == VerificationEnum.EXPIRED_TOKEN) {
-            response.setError(new ResponseError("Token is Expired", "Please Register again !!!", 409));
-            return new ResponseEntity<>(response, HttpStatus.CONFLICT);
-        } else if (status == VerificationEnum.INVALID_TOKEN) {
-            response.setError(new ResponseError("Token is invalid", "Please try again!!!", 409));
-            return new ResponseEntity<>(response, HttpStatus.CONFLICT);
-        } else {
+        if (status == VerificationEnum.VALID_TOKEN) {
             response.setData("verified");
             return new ResponseEntity<>(response, HttpStatus.OK);
+
         }
+        response.setError(new ResponseError(status.name(), "Please Register again !!!", 409));
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
     }
 }

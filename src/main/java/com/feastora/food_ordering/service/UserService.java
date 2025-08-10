@@ -76,12 +76,16 @@ public class UserService extends BaseResponse {
                 return VerificationEnum.EXPIRED_TOKEN;
             }
             UserModel userModel = jwtUtil.getUserModelFromToken(token);
+            boolean isUserExists = userRepository.getUserByEmail(userModel.getEmail()).isPresent();
+            if (isUserExists) {
+                return VerificationEnum.ALREADY_VERIFIED;
+            }
            User user = saveUserEntity(userModel);
             saveVerificationTokenForUser(token, user);
             return VerificationEnum.VALID_TOKEN;
         } catch (Exception e) {
             System.out.println(e.getMessage());
-            return VerificationEnum.EXPIRED_TOKEN;
+            return VerificationEnum.INVALID_TOKEN;
         }
     }
 
