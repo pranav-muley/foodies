@@ -1,16 +1,15 @@
 package com.feastora.food_ordering.entity;
 
 
+import com.feastora.food_ordering.enums.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
@@ -21,7 +20,7 @@ public class User {
     @Id
     private String _id;
 
-    private String role;
+    private Role role;
     private String mobileNum;
     private String userName;
     private String password;

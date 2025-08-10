@@ -55,7 +55,7 @@ public class RegistrationController extends BaseResponse {
             response.setError(new ResponseError("Token is invalid", "Please try again!!!", 409));
             return new ResponseEntity<>(response, HttpStatus.CONFLICT);
         } else {
-            response.setData(String.format("Great! %s has been verified Successfully!!!", jwtUtil.extractValueByKey(token, "userName")));
+            response.setData("verified");
             return new ResponseEntity<>(response, HttpStatus.OK);
         }
     }

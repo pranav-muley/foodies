@@ -6,6 +6,7 @@ import com.feastora.food_ordering.Utility.JwtUtil;
 import com.feastora.food_ordering.config.ServerConfig;
 import com.feastora.food_ordering.entity.User;
 import com.feastora.food_ordering.entity.VerificationToken;
+import com.feastora.food_ordering.enums.Role;
 import com.feastora.food_ordering.enums.VerificationEnum;
 import com.feastora.food_ordering.event.RegistrationControllerEvent;
 import com.feastora.food_ordering.mapping.MapperUtils;
@@ -43,16 +44,16 @@ public class UserService extends BaseResponse {
 
 
     public GenericResponse<String> registerUser(UserModel userModel, final HttpServletRequest request) {
-        User userEmailExists = userRepository.findUserByEmail(userModel.getEmail());
-        if (userEmailExists != null) {
+        Optional<User> users = userRepository.getUserByEmail(userModel.getEmail());
+        User userEmailExists = users.orElse(null);
+        if (ObjectUtils.isNotEmpty(userEmailExists)) {
             return newRestErrorResponse(409, "User with this email already exists");
         }
         String token = jwtUtil.generateTokenForUserModel(userModel);
         publisher.publishEvent(new RegistrationControllerEvent(
                 token, userModel.getUserName(), userModel.getEmail(), serverConfig.applicationUrl(request)
         ));
-        return newRestResponseData(String.format("Congrats, %s registered successfully Please Verify Your Register Email!!!",
-                Arrays.stream(userModel.getUserName().split("\\s")).toArray()[0]));
+        return newRestResponseData("Registered");
     }
 
     public void saveVerificationTokenForUser(String token, User user) {
@@ -126,10 +127,11 @@ public class UserService extends BaseResponse {
         user.setUserName(userModel.getUserName());
         user.setEmail(userModel.getEmail());
         user.setPassword(passwordEncoder.encode(userModel.getPassword()));
-        user.setRole(userModel.getRole());
+        user.setRole(Role.valueOf(userModel.getRole()));
         user.setMobileNum(userModel.getMobileNum());
         user.setLastModified(System.currentTimeMillis());
         user.setDateCreated(System.currentTimeMillis());
+        user.setEnabled(true);
        return userRepository.save(user);
     }
 }
